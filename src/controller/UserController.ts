@@ -3,6 +3,7 @@ import { getCustomRepository } from 'typeorm';
 import { UserRepository } from '../repository/UserRepository';
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
+import * as Yup from 'yup';
 
 class UserController {
 
@@ -68,6 +69,31 @@ class UserController {
       cpf
     } = request.body;
 
+    const schema = Yup.object().shape({
+      name: Yup
+        .string()
+        .max(30)
+        .required('Name is required.'),
+      email: Yup
+        .string()
+        .email('Email is invalid.')
+        .required('Email is required.'),
+      password: Yup
+        .string()
+        .min(8, 'Min 8 chars.')
+        .required('Password is required.'),
+      cpf: Yup
+        .string()
+        .length(11, 'Document is invalid.')
+        .required('Document is required.')
+    });
+
+    try {
+      await schema.validate(request.body, { abortEarly:false });
+    } catch(err) {
+      response.status(400).json(err.errors);
+    }
+
     const passwordHash = await bcrypt.hash(password, 8);
     const userRepository = getCustomRepository(UserRepository);
 
@@ -75,11 +101,22 @@ class UserController {
       email
     });
 
+    const cpfAlreadyExists = await userRepository.findOne({
+      cpf
+    });
+
     // VALIDAÇÃO EMAIL PARA SIGN UP
     if(userAlreadyExists) {
       return response.status(400).json({
         error: "User already exists!"
       })
+    } else {
+      // VALIDAÇÃO CPF
+      if(cpfAlreadyExists) {
+        return response.status(400).json({
+          error: "Document already exists!"
+        })
+      }
     }
 
     const account = userRepository.create({

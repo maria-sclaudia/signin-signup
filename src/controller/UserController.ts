@@ -4,6 +4,7 @@ import { UserRepository } from '../repository/UserRepository';
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import * as Yup from 'yup';
+import { setLocale } from 'yup';
 
 class UserController {
 
@@ -43,12 +44,12 @@ class UserController {
 
       }else{
         return response.status(400).json({
-          error: "Incorrect Password!"
+          error: "Senha inválida!"
         })
       }
     }else{
       return response.status(400).json({
-        error: "User not found!"
+        error: "Esse Email não existe!"
       })
     }
 
@@ -72,26 +73,25 @@ class UserController {
     const schema = Yup.object().shape({
       name: Yup
         .string()
-        .max(30)
-        .required('Name is required.'),
+        .required('Nome é obrigatório'),
       email: Yup
         .string()
-        .email('Email is invalid.')
-        .required('Email is required.'),
+        .required('Email é obrigatório.')
+        .email('Email inválido.'),
       password: Yup
         .string()
-        .min(8, 'Min 8 chars.')
-        .required('Password is required.'),
+        .required('Senha é obrigatória.')
+        .min(8, 'Senha deve conter no minímo 8 digítos.'),
       cpf: Yup
         .string()
-        .length(11, 'Document is invalid.')
-        .required('Document is required.')
+        .required('CPF é obrigatório.')
+        .length(14, 'CPF inválido.')
     });
 
     try {
-      await schema.validate(request.body, { abortEarly:false });
+      await schema.validate(request.body);
     } catch(err) {
-      response.status(400).json(err.errors);
+      return response.status(400).json(err.errors);
     }
 
     const passwordHash = await bcrypt.hash(password, 8);
@@ -108,13 +108,13 @@ class UserController {
     // VALIDAÇÃO EMAIL PARA SIGN UP
     if(userAlreadyExists) {
       return response.status(400).json({
-        error: "User already exists!"
+        error: "Esse Email já está sendo utilizado!"
       })
     } else {
       // VALIDAÇÃO CPF
       if(cpfAlreadyExists) {
         return response.status(400).json({
-          error: "Document already exists!"
+          error: "Esse CPF já está sendo utilizado!"
         })
       }
     }
